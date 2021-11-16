@@ -1,0 +1,274 @@
+/*Match3 game*/
+
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <windows.h>
+
+void start_game(); // 게임 시작화면 출력
+void play_game(int a[6][6]); // 필요한 함수들 호출해서 게임 진행, 잔여 라운드 수 출력
+void read_board(int a[6][6]); // board.txt 읽고 2차원 배열로 저장
+void print_board(int board[6][6], int score); // 게임 보드 등을 전달받아 점수(score), 보드, 보드의 행과 열 번호 출력
+int check_position(int a, int b, int c, int d); // 사용자 입력한 두 블록의 위치가 유효한지 검사하는 함수
+void swap(int* x, int* y); // 사용자가 입력한 두 블록의 숫자를 바꿔주는 함수
+void check_block(int a[6][6], int* score); // 매치3 검사를 진행하는 함수
+void fill_block(int a[6][6], int* score); // 게임 보드의 공백을 1~5 중 임의의 숫자로 채움
+void print_match(int a[6][6], int z[6][6], int score); // 매치된 블록들을 붉게 표시해서 출력
+void print_swap(int a[6][6], int p, int q, int r, int s, int score); // swap된 블록들을 붉게 표시해서 출력
+void red(); // 출력되는 글씨 붉게 만듦
+void gray(); // 출력되는 글씨 원래 색깔대로 만듦
+
+int main()
+{
+	int board[6][6];
+	srand(time(NULL));
+	start_game();
+	play_game(board);
+
+	return 0;
+}
+void start_game() // 게임 시작화면 출력, Enter 입력 받아서 게임 시작
+{
+	char k;
+	printf("-=-=-=-=-=-=-=-=-=-=-=\n");
+	printf("CSED 101\n");
+	printf("Assignment 2\n\n");
+	printf("[[ Match-3 Game ]]\n\n");
+	printf("Press [Enter] to start\n");
+	printf("-=-=-=-=-=-=-=-=-=-=-=\n");
+	scanf("%c", &k);
+	system("cls");
+}
+void play_game(int a[6][6])
+{
+	read_board(a);
+	int turn = 5;
+	int score = 0;
+	
+	while (turn > 0) // 턴 수가 0이 되기 전까지
+	{
+		int p = 0;
+		int q = 0;
+		int r = 0;
+		int s = 0;
+
+		while (check_position(p, q, r, s)) // 올바른 입력을 받을 때까지 무한 반복
+		{
+			print_board(a, score);
+			printf("\n====================\n");
+			printf("* Remaining turns: %d\n", turn); // 남은 턴 출력
+			printf("Swap...\n"); // swap할 블록 입력 받음
+			printf("Block 1: ");
+			scanf("%d %d", &p, &q);
+			printf("Block 2: ");
+			scanf("%d %d", &r, &s);
+			switch (check_position(p, q, r, s))
+			{
+			case 1:
+				if ((p > 5) || (q > 5) || (r > 5) || (s > 5))
+				{
+					printf("*** Out of range! ***"); // 범위 벗어난 입력에 대한 에러 메시지 출력
+					Sleep(1000);
+					system("cls");
+				}
+				else if (!(((p == r) && (abs(q - s) == 1)) || ((q == s) && (abs(p - r) == 1))) && !((p > 5) || (q > 5) || (r > 5) || (s > 5)))
+				{
+					printf("*** They are not adjacent! ***"); // 이웃하지 않은 입력에 대한 에러 메시지 출력
+					Sleep(1000);
+					system("cls");
+				}
+				break;
+			case 0:
+				swap(&a[p][q], &a[r][s]); // 조건에 맞는 입력 시 두 블록 swap
+				system("cls");
+				break;
+			}
+		}
+		print_swap(a, p, q, r, s, score); // swap된 블록 붉게 표시하여 출력
+		Sleep(1000);
+		system("cls");
+		check_block(a, &score); // 매치3 검사
+
+		turn--; // 잔여 턴 1 감소
+	}
+	print_board(a, score); 
+	printf("\n====================\n");
+	printf("** You've earned %d points! **\n", score);
+	printf("계속하려면 아무 키나 누르십시오 . . ."); // 게임 종료
+}
+void read_board(int a[6][6]) 
+{
+	FILE* board;
+	board = fopen("board.txt", "r");
+	if (board != NULL) // 텍스트 파일이 존재할 경우
+	{
+		for (int i = 0; i < 6; i++)
+		{
+			for (int j = 0; j < 6; j++)
+				fscanf(board, "%d", &a[i][j]); // 2차원 배열 a로 데이터 받아옴
+		}
+	}
+	else
+		printf("파일이 존재하지 않습니다."); // 텍스트 파일 존재하지 않을 경우 에러 메시지 출력
+}
+void print_board(int a[6][6], int score) 
+{
+	printf("Score: %d\n", score); // 획득한 점수 출력
+	for (int row = 0; row < 6; row++)
+	{
+		for (int col = 0; col < 6; col++)
+		{
+			if (a[row][col] == 6) // 공백 출력하는 경우
+				printf("  ");
+			else
+				printf("%d ", a[row][col]); // 숫자 출력하는 경우
+		}
+		printf("| %d\n", row);
+	}
+	printf("------------+\n");
+	printf("0 1 2 3 4 5");
+}
+int check_position(int p, int q, int r, int s) //ok
+{
+	if (!((p > 5) || (q > 5) || (r > 5) || (s > 5)) && (((p == r) && (abs(q - s) == 1)) || ((q == s) && (abs(p - r) == 1))))
+		// 범위를 벗어나지 않고 이웃한 블록을 입력 받았을 경우 0 리턴
+		return 0;
+	else // 잘못된 입력 받았을 경우 1 리턴
+		return 1;
+}
+void swap(int* x, int* y) // 두 정수 swap
+{
+	int temp = *x;
+	*x = *y;
+	*y = temp;
+}
+void check_block(int a[6][6], int* score)
+{
+	int z[6][6] = { 0 };
+	
+	for (int i = 0; i < 6; i++) // 가로 방향 매치3 검사
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			if ((a[i][j] == a[i][j + 1]) && (a[i][j + 1] == a[i][j + 2])) // 3개 이상 연속된 블록들의 좌표를 기억
+			{
+				z[i][j] = 1;
+				z[i][j + 1] = 1;
+				z[i][j + 2] = 1;
+			}
+		}
+	}
+
+	for (int i = 0; i < 6; i++) // 세로 방향 매치3 검사
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			if ((a[j][i] == a[j + 1][i]) && (a[j + 1][i] == a[j + 2][i])) // 3개 이상 연속된 블록들의 좌표를 기억
+			{
+				z[j][i] = 1;
+				z[j + 1][i] = 1;
+				z[j + 2][i] = 1;
+			}
+		}
+	}
+
+	int flag = 0;
+	for (int i = 0; i < 6; i++)
+	{
+		for (int j = 0; j < 6; j++)
+		{
+			if (z[i][j] == 1)
+				flag = 1;
+		}
+	}
+	if (flag == 0)
+		return; // 3개 이상 연속된 블록들이 없다면 함수 종료
+
+	print_match(a, z, *score); // 매치된 것들 붉은 색으로 출력
+	Sleep(1000);
+	system("cls");
+
+	for (int i = 0; i < 6; i++)
+	{
+		for (int j = 0; j < 6; j++)
+		{
+			if (z[i][j] == 1)
+			{
+				*score += a[i][j]; // 3개 이상 연속된 블록들 숫자 합 계산하여 점수에 반영
+				a[i][j] = 6; // 공백을 출력하기 위함
+			}
+		}
+	}
+	print_board(a, *score); // 구멍난 보드 출력
+	Sleep(1000);
+	system("cls");
+
+	fill_block(a, score); // 구멍난 보드 채우기
+}
+void fill_block(int a[6][6], int* score)
+{
+	for (int i = 0; i < 6; i++)
+	{
+		for (int j = 0; j < 6; j++)
+		{
+			if (a[i][j] == 6) // 게임 보드에서 구멍난 부분을
+				a[i][j] = rand() % 5 + 1; // 1-5 중 임의의 숫자로 채움
+		}
+	}
+	print_board(a, *score); // 새로 채워진 보드 출력
+	Sleep(1000);
+	system("cls");
+
+	check_block(a, score); // 다시 매치3 검사
+}
+void red()
+{
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 12); 
+}
+void gray()
+{
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
+}
+void print_match(int a[6][6], int z[6][6], int score)
+{
+	printf("Score: %d\n", score);
+	for (int row = 0; row < 6; row++)
+	{
+		for (int col = 0; col < 6; col++)
+		{
+			if (z[row][col] == 1) // 매치된 블록들을
+			{
+				red(); // 붉은색으로
+				printf("%d ", a[row][col]); // 출력
+				gray();
+			}
+			else
+				printf("%d ", a[row][col]);
+		}
+		printf("| %d\n", row);
+	}
+	printf("------------+\n");
+	printf("0 1 2 3 4 5");
+}
+void print_swap(int a[6][6], int p, int q, int r, int s, int score)
+{
+	printf("Score: %d\n", score);
+	for (int row = 0; row < 6; row++)
+	{
+		for (int col = 0; col < 6; col++)
+		{
+			if (((row == p) && (col == q)) || ((row == r) && (col == s))) // swap된 블록들을
+			{
+				red(); // 붉은색으로
+				printf("%d ", a[row][col]); // 출력
+				gray();
+			}
+			else
+				printf("%d ", a[row][col]);
+		}
+		printf("| %d\n", row);
+	}
+	printf("------------+\n");
+	printf("0 1 2 3 4 5");
+}
